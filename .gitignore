@@ -1,0 +1,29 @@
+# Virtual environment
+.venv/
+venv/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Build and distribution
+build/
+dist/
+*.spec.bak
+*.egg-info/
+.eggs/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and temp
+*.log
+scratch/
+tmp/
