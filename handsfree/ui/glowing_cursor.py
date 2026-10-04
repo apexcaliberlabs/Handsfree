@@ -31,8 +31,9 @@ class GlowingCursorOverlay:
     The window is completely click-through, transparent, topmost, and non-activating.
     """
 
-    def __init__(self) -> None:
-        self.root: Optional[tk.Tk] = None
+    def __init__(self, master: Optional[tk.Misc] = None) -> None:
+        self.master = master
+        self.root: Optional[tk.Toplevel | tk.Tk] = None
         self.canvas: Optional[tk.Canvas] = None
         self.hwnd: Optional[int] = None
 
@@ -53,15 +54,24 @@ class GlowingCursorOverlay:
         self.half_size = self.size // 2
 
     def start(self) -> None:
-        """Starts the overlay UI loop in a background thread."""
+        """Starts the overlay UI loop."""
         if self.running:
             return
         self.running = True
-        self.thread = threading.Thread(target=self._run_ui, daemon=True, name="HandsfreeCursorOverlay")
-        self.thread.start()
 
-    def _run_ui(self) -> None:
-        self.root = tk.Tk()
+        if self.master is not None:
+            self._setup_window(is_toplevel=True)
+            self._render_loop()
+        else:
+            self.thread = threading.Thread(target=self._run_ui, daemon=True, name="HandsfreeCursorOverlay")
+            self.thread.start()
+
+    def _setup_window(self, is_toplevel: bool = False) -> None:
+        if is_toplevel and self.master:
+            self.root = tk.Toplevel(self.master)
+        else:
+            self.root = tk.Tk()
+
         self.root.title("Handsfree_Cursor_Overlay")
         self.root.overrideredirect(True)
 
@@ -103,9 +113,11 @@ class GlowingCursorOverlay:
         except Exception as e:
             print(f"[Handsfree Overlay] Window styling error: {e}")
 
-        # Start animation render loop
+    def _run_ui(self) -> None:
+        self._setup_window(is_toplevel=False)
         self._render_loop()
-        self.root.mainloop()
+        if self.root:
+            self.root.mainloop()
 
     def update_position(self, x: int, y: int, mode: str = "MOVE", pinch_factor: float = 0.0) -> None:
         """Called by tracker thread to update target position and gesture mode."""
@@ -226,7 +238,8 @@ class GlowingCursorOverlay:
         self.running = False
         if self.root:
             try:
-                self.root.quit()
+                if self.master is None:
+                    self.root.quit()
                 self.root.destroy()
             except Exception:
                 pass

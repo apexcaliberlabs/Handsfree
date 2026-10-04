@@ -3,7 +3,15 @@ import os
 import sys
 import threading
 import time
+import tkinter as tk
 from pathlib import Path
+from typing import Optional
+
+# Ensure standard streams exist when packaged with pyinstaller console=False
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, "w")
+if sys.stderr is None:
+    sys.stderr = open(os.devnull, "w")
 
 # Ensure package root is in sys.path
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -31,6 +39,10 @@ class HandsfreeApp:
 
         print(f"[{__app_name__}] Initializing v{__version__} by Apex Caliber Labs...")
 
+        # Single unified Tk root
+        self.root = tk.Tk()
+        self.root.withdraw()  # Hidden root window
+
         # Initialize core services
         self.mouse = MouseController()
         self.camera = CameraFeed()
@@ -42,11 +54,12 @@ class HandsfreeApp:
             print(f"[{__app_name__}] Error loading HandTracker: {e}")
 
         self.gesture_engine = GestureEngine(self.mouse)
-        self.overlay = GlowingCursorOverlay()
-        self.preview_hud = CameraPreviewHUD(self.camera, self.gesture_engine)
+        self.overlay = GlowingCursorOverlay(master=self.root)
+        self.preview_hud = CameraPreviewHUD(master=self.root, camera_feed=self.camera, gesture_engine=self.gesture_engine)
 
         # System tray controller
         self.tray = SystemTrayApp(
+            master=self.root,
             on_toggle_active=self.toggle_active,
             on_open_calibration=self.open_calibration,
             on_toggle_hud=self.toggle_hud,
@@ -65,7 +78,7 @@ class HandsfreeApp:
 
     def open_calibration(self) -> None:
         """Opens setup and calibration wizard."""
-        wizard = CalibrationWizard(self.camera, on_complete=self._on_calibration_complete)
+        wizard = CalibrationWizard(master=self.root, camera_feed=self.camera, on_complete=self._on_calibration_complete)
         wizard.launch()
 
     def _on_calibration_complete(self) -> None:
@@ -92,11 +105,6 @@ class HandsfreeApp:
         # Start system tray
         self.tray.start()
 
-        # Launch calibration wizard if initial setup was never run
-        if not config.get("initial_setup_completed", False):
-            print(f"[{__app_name__}] First run detected - launching Setup Wizard...")
-            self.open_calibration()
-
         # Start main tracking loop thread
         self.worker_thread = threading.Thread(
             target=self._tracking_loop,
@@ -106,6 +114,13 @@ class HandsfreeApp:
         self.worker_thread.start()
 
         print(f"[{__app_name__}] Running in background system tray.")
+
+    def run(self) -> None:
+        """Runs the main GUI message loop."""
+        try:
+            self.root.mainloop()
+        except KeyboardInterrupt:
+            self.shutdown()
 
     def _tracking_loop(self) -> None:
         """High-frequency vision processing loop."""
@@ -146,8 +161,7 @@ class HandsfreeApp:
                     # Hand not in view: smooth release
                     if self.gesture_engine.is_pinching or self.gesture_engine.is_dragging:
                         self.gesture_engine.reset_filters()
-            except Exception as e:
-                # Prevent any frame glitch from breaking the loop
+            except Exception:
                 time.sleep(0.01)
 
     def shutdown(self) -> None:
@@ -171,6 +185,12 @@ class HandsfreeApp:
         if self.tray:
             self.tray.stop()
 
+        try:
+            self.root.quit()
+            self.root.destroy()
+        except Exception:
+            pass
+
         sys.exit(0)
 
 
@@ -181,16 +201,14 @@ def main() -> None:
     args = parser.parse_args()
 
     app = HandsfreeApp()
-    if args.calibrate:
-        app.open_calibration()
     app.start()
 
-    # Keep main process alive while background threads execute
-    try:
-        while app.is_running:
-            time.sleep(0.5)
-    except KeyboardInterrupt:
-        app.shutdown()
+    # Launch calibration wizard if initial setup was never run or requested
+    if args.calibrate or not config.get("initial_setup_completed", False):
+        print(f"[{__app_name__}] Launching Setup Wizard...")
+        app.open_calibration()
+
+    app.run()
 
 
 if __name__ == "__main__":

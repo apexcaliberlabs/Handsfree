@@ -20,11 +20,12 @@ class CalibrationWizard:
     4. Smoothing & Cursor Speed
     """
 
-    def __init__(self, camera_feed=None, on_complete=None) -> None:
+    def __init__(self, master: Optional[tk.Misc] = None, camera_feed=None, on_complete=None) -> None:
+        self.master = master
         self.camera_feed = camera_feed
         self.on_complete = on_complete
 
-        self.root: Optional[tk.Tk] = None
+        self.root: Optional[tk.Toplevel | tk.Tk] = None
         self.tracker: Optional[HandTracker] = None
         self.is_running: bool = False
         self.step: int = 1
@@ -40,11 +41,27 @@ class CalibrationWizard:
         self.current_index_coords = (0.5, 0.5)
 
     def launch(self) -> None:
-        """Launches calibration window in a dedicated UI thread."""
-        threading.Thread(target=self._run_wizard, daemon=True, name="HandsfreeCalibration").start()
+        """Launches calibration window."""
+        if self.is_running and self.root:
+            try:
+                self.root.deiconify()
+                self.root.lift()
+                self.root.focus_force()
+                return
+            except Exception:
+                pass
 
-    def _run_wizard(self) -> None:
-        self.root = tk.Tk()
+        if self.master is not None:
+            self._setup_wizard(is_toplevel=True)
+        else:
+            threading.Thread(target=self._run_standalone, daemon=True, name="HandsfreeCalibration").start()
+
+    def _setup_wizard(self, is_toplevel: bool = False) -> None:
+        if is_toplevel and self.master:
+            self.root = tk.Toplevel(self.master)
+        else:
+            self.root = tk.Tk()
+
         self.root.title("Handsfree - Initial Setup & Calibration")
         self.root.geometry("740x600")
         self.root.resizable(False, False)
@@ -62,7 +79,18 @@ class CalibrationWizard:
         # Build UI layout
         self._build_ui()
         self._video_loop()
-        self.root.mainloop()
+
+        # Bring window to front
+        self.root.deiconify()
+        self.root.lift()
+        self.root.attributes("-topmost", True)
+        self.root.after_idle(lambda: self.root.attributes("-topmost", False) if self.root else None)
+        self.root.focus_force()
+
+    def _run_standalone(self) -> None:
+        self._setup_wizard(is_toplevel=False)
+        if self.root:
+            self.root.mainloop()
 
     def _build_ui(self) -> None:
         # Header banner

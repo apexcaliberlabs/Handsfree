@@ -16,11 +16,12 @@ class CameraPreviewHUD:
     MediaPipe skeleton, and real-time gesture telemetry.
     """
 
-    def __init__(self, camera_feed, gesture_engine) -> None:
+    def __init__(self, master: Optional[tk.Misc] = None, camera_feed=None, gesture_engine=None) -> None:
+        self.master = master
         self.camera_feed = camera_feed
         self.gesture_engine = gesture_engine
 
-        self.root: Optional[tk.Toplevel] = None
+        self.root: Optional[tk.Toplevel | tk.Tk] = None
         self.label_video: Optional[tk.Label] = None
         self.label_status: Optional[tk.Label] = None
         self.is_open: bool = False
@@ -33,15 +34,19 @@ class CameraPreviewHUD:
                 try:
                     self.root.deiconify()
                     self.root.lift()
+                    self.root.focus_force()
                     return
                 except Exception:
                     pass
 
             self.is_open = True
-            threading.Thread(target=self._create_window, daemon=True, name="HandsfreeHUDThread").start()
+            if self.master is not None:
+                self._setup_window(is_toplevel=True)
+            else:
+                threading.Thread(target=self._run_standalone, daemon=True, name="HandsfreeHUDThread").start()
 
-    def _create_window(self) -> None:
-        window = tk.Tk()
+    def _setup_window(self, is_toplevel: bool = False) -> None:
+        window = tk.Toplevel(self.master) if is_toplevel and self.master else tk.Tk()
         self.root = window
         window.title("Handsfree - Live Camera Preview (Apex Caliber Labs)")
         window.geometry("640x530")
@@ -81,7 +86,16 @@ class CameraPreviewHUD:
 
         # Loop update
         self._update_feed()
-        window.mainloop()
+
+        # Bring to front
+        window.deiconify()
+        window.lift()
+        window.focus_force()
+
+    def _run_standalone(self) -> None:
+        self._setup_window(is_toplevel=False)
+        if self.root:
+            self.root.mainloop()
 
     def _update_feed(self) -> None:
         if not self.is_open or not self.root:

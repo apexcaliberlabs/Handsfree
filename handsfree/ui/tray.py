@@ -17,15 +17,17 @@ class SystemTrayApp:
 
     def __init__(
         self,
-        on_toggle_active: Callable[[bool], None],
-        on_open_calibration: Callable[[], None],
-        on_toggle_hud: Callable[[bool], None],
-        on_exit: Callable[[], None]
+        master: Optional[object] = None,
+        on_toggle_active: Optional[Callable[[bool], None]] = None,
+        on_open_calibration: Optional[Callable[[], None]] = None,
+        on_toggle_hud: Optional[Callable[[bool], None]] = None,
+        on_exit: Optional[Callable[[], None]] = None
     ) -> None:
-        self.on_toggle_active = on_toggle_active
-        self.on_open_calibration = on_open_calibration
-        self.on_toggle_hud = on_toggle_hud
-        self.on_exit = on_exit
+        self.master = master
+        self.on_toggle_active = on_toggle_active or (lambda a: None)
+        self.on_open_calibration = on_open_calibration or (lambda: None)
+        self.on_toggle_hud = on_toggle_hud or (lambda h: None)
+        self.on_exit = on_exit or (lambda: None)
 
         self.is_active: bool = True
         self.is_hud_open: bool = False
@@ -87,11 +89,17 @@ class SystemTrayApp:
             self.icon.update_menu()
 
     def _handle_calibration(self, icon, item) -> None:
-        self.on_open_calibration()
+        if self.master and hasattr(self.master, "after"):
+            self.master.after(0, self.on_open_calibration)
+        else:
+            self.on_open_calibration()
 
     def _handle_toggle_hud(self, icon, item) -> None:
         self.is_hud_open = not self.is_hud_open
-        self.on_toggle_hud(self.is_hud_open)
+        if self.master and hasattr(self.master, "after"):
+            self.master.after(0, lambda: self.on_toggle_hud(self.is_hud_open))
+        else:
+            self.on_toggle_hud(self.is_hud_open)
         if self.icon:
             self.icon.update_menu()
 
@@ -121,7 +129,10 @@ class SystemTrayApp:
     def _handle_exit(self, icon, item) -> None:
         if self.icon:
             self.icon.stop()
-        self.on_exit()
+        if self.master and hasattr(self.master, "after"):
+            self.master.after(0, self.on_exit)
+        else:
+            self.on_exit()
 
     def start(self) -> None:
         """Runs the tray icon event loop in a background thread."""
