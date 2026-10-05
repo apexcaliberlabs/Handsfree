@@ -78,6 +78,7 @@ class CalibrationWizard:
 
         # Build UI layout
         self._build_ui()
+        self._activate_webcam_ui()
         self._video_loop()
 
         # Bring window to front
@@ -150,6 +151,13 @@ class CalibrationWizard:
             command=self._next_step, width=12, relief="flat"
         )
         self.btn_next.pack(side="right", padx=16, pady=10)
+
+        self.btn_camera = tk.Button(
+            footer, text="📷 Turn On Webcam", font=("Segoe UI", 9, "bold"),
+            bg="#1f2c3d", fg="#00e5ff", activebackground="#293b52", activeforeground="#ffffff",
+            command=self._activate_webcam_ui, padx=12, relief="flat"
+        )
+        self.btn_camera.pack(side="right", padx=(0, 8), pady=10)
 
     def _render_step_controls(self) -> None:
         for widget in self.control_panel.winfo_children():
@@ -255,39 +263,82 @@ class CalibrationWizard:
         self.captured_corners[corner_name] = self.current_index_coords
         messagebox.showinfo("Corner Saved", f"Captured {corner_name.replace('_', ' ').title()} coordinate!")
 
+    def _activate_webcam_ui(self) -> None:
+        """Explicitly activates the laptop's built-in webcam hardware."""
+        if not self.camera_feed:
+            from handsfree.core.camera import CameraFeed
+            self.camera_feed = CameraFeed()
+
+        if self.tracker is None:
+            try:
+                self.tracker = HandTracker()
+            except Exception as e:
+                print(f"[Calibration] Tracker init: {e}")
+
+        if hasattr(self, "btn_camera"):
+            self.btn_camera.configure(text="⏳ Connecting...", state="disabled")
+            self.root.update_idletasks()
+
+        success, msg = self.camera_feed.activate_builtin_webcam()
+
+        if hasattr(self, "btn_camera"):
+            if success:
+                self.btn_camera.configure(
+                    text="✓ Webcam Active",
+                    bg="#0f3d2a",
+                    fg="#00e676",
+                    state="normal"
+                )
+            else:
+                self.btn_camera.configure(
+                    text="⚠️ Turn On Webcam",
+                    bg="#3d1f1f",
+                    fg="#ff5252",
+                    state="normal"
+                )
+
     def _video_loop(self) -> None:
         if not self.is_running or not self.root:
             return
 
+        has_rendered = False
         if self.camera_feed is not None:
             frame, _ = self.camera_feed.get_latest_frame()
-            if frame is not None and self.tracker is not None:
-                hands, handedness = self.tracker.process_frame(frame)
-                is_pinching = False
+            if frame is not None:
+                has_rendered = True
+                if self.tracker is None:
+                    try:
+                        self.tracker = HandTracker()
+                    except Exception as e:
+                        print(f"[Calibration] Tracker warning: {e}")
 
-                if hands:
-                    hand = hands[0]
-                    # Index tip is landmark 8
-                    idx_pt = hand[8]
-                    self.current_index_coords = (idx_pt.x, idx_pt.y)
+                if self.tracker is not None:
+                    hands, handedness = self.tracker.process_frame(frame)
+                    is_pinching = False
 
-                    # Check pinch distance
-                    thumb_pt = hand[4]
-                    wrist = hand[0]
-                    m_mcp = hand[9]
-                    palm = max(0.1, np.hypot(wrist.x - m_mcp.x, wrist.y - m_mcp.y))
-                    dist = np.hypot(thumb_pt.x - idx_pt.x, thumb_pt.y - idx_pt.y) / palm
-                    self.current_pinch_dist = dist
-                    is_pinching = dist < config.get("pinch_threshold", 0.065)
+                    if hands:
+                        hand = hands[0]
+                        # Index tip is landmark 8
+                        idx_pt = hand[8]
+                        self.current_index_coords = (idx_pt.x, idx_pt.y)
 
-                    frame = self.tracker.draw_skeleton(frame, hand, is_pinching=is_pinching)
+                        # Check pinch distance
+                        thumb_pt = hand[4]
+                        wrist = hand[0]
+                        m_mcp = hand[9]
+                        palm = max(0.1, np.hypot(wrist.x - m_mcp.x, wrist.y - m_mcp.y))
+                        dist = np.hypot(thumb_pt.x - idx_pt.x, thumb_pt.y - idx_pt.y) / palm
+                        self.current_pinch_dist = dist
+                        is_pinching = dist < config.get("pinch_threshold", 0.065)
 
-                    # Update step 3 meter
-                    if self.step == 3 and hasattr(self, "lbl_pinch_meter") and self.lbl_pinch_meter:
-                        if is_pinching:
-                            self.lbl_pinch_meter.configure(text="Pinch Status: CLICKED!", fg="#00ff88")
-                        else:
-                            self.lbl_pinch_meter.configure(text=f"Pinch Dist: {dist:.3f}", fg="#a0a0c0")
+                        frame = self.tracker.draw_skeleton(frame, hand, is_pinching=is_pinching)
+
+                        # Update step 3 meter
+                        if self.step == 3 and hasattr(self, "lbl_pinch_meter") and self.lbl_pinch_meter:
+                            if is_pinching:
+                                self.lbl_pinch_meter.configure(text="Pinch Status: CLICKED!", fg="#00ff88")
+                            else:
+                                self.lbl_pinch_meter.configure(text=f"Pinch Dist: {dist:.3f}", fg="#a0a0c0")
 
                 # Resize to fit preview panel
                 display_frame = cv2.resize(frame, (380, 480))
@@ -295,6 +346,17 @@ class CalibrationWizard:
                 img = ImageTk.PhotoImage(image=Image.fromarray(rgb))
                 self.lbl_cam.configure(image=img)
                 self.lbl_cam.image = img
+
+        if not has_rendered:
+            # Standby graphic when webcam is not active or starting
+            standby = np.zeros((480, 380, 3), dtype=np.uint8)
+            standby[:] = (22, 22, 30)
+            cv2.putText(standby, "Webcam Standby", (85, 210), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 229, 255), 2, cv2.LINE_AA)
+            cv2.putText(standby, "Click 'Turn On Webcam' below", (50, 250), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (180, 180, 195), 1, cv2.LINE_AA)
+            cv2.putText(standby, "to activate device hardware", (75, 275), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (140, 140, 160), 1, cv2.LINE_AA)
+            img = ImageTk.PhotoImage(image=Image.fromarray(standby))
+            self.lbl_cam.configure(image=img)
+            self.lbl_cam.image = img
 
         if self.root:
             self.root.after(33, self._video_loop)

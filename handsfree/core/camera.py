@@ -29,34 +29,66 @@ class CameraFeed:
         self.is_connected: bool = False
 
     def open_camera(self) -> bool:
-        """Opens camera using DirectShow on Windows with fallback."""
-        try:
-            # Try DirectShow first on Windows for instant initialization
-            self.cap = cv2.VideoCapture(self.camera_index, cv2.CAP_DSHOW)
-            if not self.cap.isOpened():
-                # Fallback to default backend
-                self.cap = cv2.VideoCapture(self.camera_index)
+        """Opens built-in webcam using DirectShow, Media Foundation, or auto-detect with multi-index scan."""
+        # Release existing capture object if open
+        if self.cap is not None:
+            try:
+                self.cap.release()
+            except Exception:
+                pass
+            self.cap = None
 
-            if not self.cap.isOpened():
-                print(f"[Handsfree Camera] Failed to open camera index {self.camera_index}")
-                self.is_connected = False
-                return False
+        candidate_indices = [self.camera_index]
+        for fallback_idx in [0, 1, 2]:
+            if fallback_idx not in candidate_indices:
+                candidate_indices.append(fallback_idx)
 
-            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
-            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
-            self.cap.set(cv2.CAP_PROP_FPS, self.fps)
-            self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Minimal buffer for zero latency
+        backends = [cv2.CAP_DSHOW, cv2.CAP_MSMF, cv2.CAP_ANY]
 
-            self.is_connected = True
-            return True
-        except Exception as e:
-            print(f"[Handsfree Camera] Error initializing camera: {e}")
-            self.is_connected = False
-            return False
+        for idx in candidate_indices:
+            for api in backends:
+                try:
+                    cap = cv2.VideoCapture(idx, api)
+                    if cap.isOpened():
+                        # Verify hardware is actually streaming frames
+                        ret, test_frame = cap.read()
+                        if ret and test_frame is not None:
+                            self.cap = cap
+                            self.camera_index = idx
+                            config.set("camera_index", idx)
+
+                            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+                            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+                            self.cap.set(cv2.CAP_PROP_FPS, self.fps)
+                            self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
+                            self.is_connected = True
+                            print(f"[Handsfree Camera] Successfully activated built-in webcam on index {idx} (API: {api})")
+                            return True
+                    cap.release()
+                except Exception:
+                    pass
+
+        print(f"[Handsfree Camera] Failed to open built-in webcam across tested indices {candidate_indices}")
+        self.is_connected = False
+        return False
+
+    def activate_builtin_webcam(self) -> Tuple[bool, str]:
+        """Explicitly activates or reactivates the on-device webcam hardware."""
+        self.stop()
+        time.sleep(0.1)
+
+        success = self.start()
+        if success:
+            msg = f"Webcam Activated (Index {self.camera_index})"
+            return True, msg
+        else:
+            msg = "Could not activate webcam. Check camera privacy settings in Windows."
+            return False, msg
 
     def start(self) -> bool:
         """Starts the capture worker thread."""
-        if self.running:
+        if self.running and self.is_connected:
             return True
 
         if not self.open_camera():
