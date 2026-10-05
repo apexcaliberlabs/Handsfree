@@ -62,9 +62,10 @@ class CalibrationWizard:
         else:
             self.root = tk.Tk()
 
-        self.root.title("Handsfree - Initial Setup & Calibration")
-        self.root.geometry("740x600")
-        self.root.resizable(False, False)
+        self.root.title("Handsfree - Guided Setup & Calibration (Apex Caliber Labs)")
+        self.root.geometry("880x660")
+        self.root.minsize(800, 580)
+        self.root.resizable(True, True)
         self.root.configure(bg="#0f0f14")
 
         # Initialize tracker
@@ -94,8 +95,8 @@ class CalibrationWizard:
             self.root.mainloop()
 
     def _build_ui(self) -> None:
-        # Header banner
-        header = tk.Frame(self.root, bg="#161622", height=60)
+        # 1. Header banner (Top)
+        header = tk.Frame(self.root, bg="#161622", height=55)
         header.pack(fill="x", side="top")
 
         lbl_app = tk.Label(
@@ -105,59 +106,59 @@ class CalibrationWizard:
             fg="#00e5ff",
             bg="#161622"
         )
-        lbl_app.pack(side="left", padx=18, pady=12)
+        lbl_app.pack(side="left", padx=20, pady=10)
 
         lbl_sub = tk.Label(
             header,
-            text="by Apex Caliber Labs  |  Calibration & Setup",
+            text="by Apex Caliber Labs  |  Guided Setup & Hardware Calibration",
             font=("Segoe UI", 10),
-            fg="#808098",
+            fg="#9090aa",
             bg="#161622"
         )
-        lbl_sub.pack(side="left", pady=16)
+        lbl_sub.pack(side="left", pady=14)
 
-        # Main content container
-        content = tk.Frame(self.root, bg="#0f0f14")
-        content.pack(fill="both", expand=True, padx=20, pady=12)
-
-        # Left panel: live camera preview
-        cam_panel = tk.Frame(content, bg="#161622", bd=1, relief="solid")
-        cam_panel.pack(side="left", fill="both", expand=True, padx=(0, 10))
-
-        self.lbl_cam = tk.Label(cam_panel, bg="#000000")
-        self.lbl_cam.pack(fill="both", expand=True, padx=4, pady=4)
-
-        # Right panel: calibration step instructions & controls
-        self.control_panel = tk.Frame(content, bg="#161622", width=300)
-        self.control_panel.pack(side="right", fill="both", padx=(10, 0))
-        self.control_panel.pack_propagate(False)
-
-        self._render_step_controls()
-
-        # Footer
-        footer = tk.Frame(self.root, bg="#161622", height=50)
+        # 2. Footer navigation bar (Packed at BOTTOM FIRST so it is NEVER cut off)
+        footer = tk.Frame(self.root, bg="#161622", height=60)
         footer.pack(fill="x", side="bottom")
 
         self.btn_prev = tk.Button(
-            footer, text="< Back", font=("Segoe UI", 9),
+            footer, text="< Back", font=("Segoe UI", 10),
             bg="#2a2a3c", fg="#ffffff", activebackground="#3a3a4c",
-            command=self._prev_step, width=10, relief="flat"
+            command=self._prev_step, width=11, relief="flat", cursor="hand2"
         )
-        self.btn_prev.pack(side="left", padx=16, pady=10)
+        self.btn_prev.pack(side="left", padx=20, pady=12)
 
         self.btn_next = tk.Button(
-            footer, text="Next >", font=("Segoe UI", 9, "bold"),
+            footer, text="Next Step >", font=("Segoe UI", 10, "bold"),
             bg="#00bcd4", fg="#000000", activebackground="#00e5ff",
-            command=self._next_step, width=12, relief="flat"
+            command=self._next_step, width=14, relief="flat", cursor="hand2"
         )
-        self.btn_next.pack(side="right", padx=16, pady=10)
+        self.btn_next.pack(side="right", padx=20, pady=12)
 
         self.btn_camera = tk.Button(
             footer, text="📷 Turn On Webcam", font=("Segoe UI", 9, "bold"),
             bg="#1f2c3d", fg="#00e5ff", activebackground="#293b52", activeforeground="#ffffff",
-            command=self._activate_webcam_ui, padx=12, relief="flat"
+            command=self._activate_webcam_ui, padx=14, relief="flat", cursor="hand2"
         )
-        self.btn_camera.pack(side="right", padx=(0, 8), pady=10)
+        self.btn_camera.pack(side="right", padx=(0, 10), pady=12)
+
+        # 3. Main content container (Occupies the area between header and footer)
+        content = tk.Frame(self.root, bg="#0f0f14")
+        content.pack(fill="both", expand=True, padx=18, pady=12)
+
+        # Left column: live camera preview
+        cam_panel = tk.Frame(content, bg="#161622", bd=1, relief="solid")
+        cam_panel.pack(side="left", fill="both", expand=True, padx=(0, 12))
+
+        self.lbl_cam = tk.Label(cam_panel, bg="#000000")
+        self.lbl_cam.pack(fill="both", expand=True, padx=4, pady=4)
+
+        # Right column: step instructions & guided interactive controls
+        self.control_panel = tk.Frame(content, bg="#161622", width=340)
+        self.control_panel.pack(side="right", fill="both", padx=(0, 0))
+        self.control_panel.pack_propagate(False)
+
+        self._render_step_controls()
 
     def _render_step_controls(self) -> None:
         for widget in self.control_panel.winfo_children():
@@ -166,102 +167,195 @@ class CalibrationWizard:
         p = self.control_panel
 
         if self.step == 1:
-            # Step 1: Camera & Hand Presence
-            tk.Label(p, text="Step 1 of 4", font=("Segoe UI", 9), fg="#00e5ff", bg="#161622").pack(anchor="w", padx=14, pady=(16, 2))
-            tk.Label(p, text="Hand Recognition", font=("Segoe UI", 12, "bold"), fg="#ffffff", bg="#161622").pack(anchor="w", padx=14, pady=(0, 10))
+            # Step 1: Camera Detection & Real-time Hand Recognition
+            tk.Label(p, text="Step 1 of 4", font=("Segoe UI", 9, "bold"), fg="#00e5ff", bg="#161622").pack(anchor="w", padx=16, pady=(16, 2))
+            tk.Label(p, text="Hand Recognition", font=("Segoe UI", 13, "bold"), fg="#ffffff", bg="#161622").pack(anchor="w", padx=16, pady=(0, 8))
+
             desc = (
-                "Ensure your webcam is centered.\n\n"
-                "Raise your hand in front of the camera.\n"
-                "You should see the glowing cyber-skeleton track your fingers in real time.\n\n"
-                "Keep good lighting on your hands."
+                "Ensure your laptop webcam is turned on.\n\n"
+                "Hold either hand up in front of the screen (1 to 2 feet away).\n\n"
+                "The AI will automatically lock onto your fingers with a luminous cyber-skeleton."
             )
-            tk.Label(p, text=desc, font=("Segoe UI", 9), fg="#c0c0d0", bg="#161622", justify="left", wraplength=260).pack(anchor="w", padx=14, pady=6)
+            tk.Label(p, text=desc, font=("Segoe UI", 9), fg="#c0c0d8", bg="#161622", justify="left", wraplength=300).pack(anchor="w", padx=16, pady=4)
+
+            # Live Hand Status Box
+            self.box_hand_status = tk.Frame(p, bg="#1a1a28", bd=1, relief="ridge")
+            self.box_hand_status.pack(fill="x", padx=16, pady=16)
+
+            self.lbl_hand_status = tk.Label(
+                self.box_hand_status,
+                text="WAITING FOR HAND...",
+                font=("Segoe UI", 10, "bold"),
+                fg="#ffaa00",
+                bg="#1a1a28"
+            )
+            self.lbl_hand_status.pack(anchor="w", padx=12, pady=(10, 2))
+
+            self.lbl_hand_details = tk.Label(
+                self.box_hand_status,
+                text="Raise your hand to the camera to proceed.",
+                font=("Segoe UI", 8),
+                fg="#9090aa",
+                bg="#1a1a28"
+            )
+            self.lbl_hand_details.pack(anchor="w", padx=12, pady=(0, 10))
+
+            tips = "💡 Tip: Make sure your room has decent lighting and your palm faces the webcam."
+            tk.Label(p, text=tips, font=("Segoe UI", 8, "italic"), fg="#707090", bg="#161622", justify="left", wraplength=300).pack(anchor="w", padx=16, pady=8)
 
         elif self.step == 2:
             # Step 2: Comfortable Reach Calibration
-            tk.Label(p, text="Step 2 of 4", font=("Segoe UI", 9), fg="#00e5ff", bg="#161622").pack(anchor="w", padx=14, pady=(16, 2))
-            tk.Label(p, text="Reach Calibration", font=("Segoe UI", 12, "bold"), fg="#ffffff", bg="#161622").pack(anchor="w", padx=14, pady=(0, 8))
+            tk.Label(p, text="Step 2 of 4", font=("Segoe UI", 9, "bold"), fg="#00e5ff", bg="#161622").pack(anchor="w", padx=16, pady=(16, 2))
+            tk.Label(p, text="Reach Calibration", font=("Segoe UI", 13, "bold"), fg="#ffffff", bg="#161622").pack(anchor="w", padx=16, pady=(0, 8))
+
             desc = (
-                "Define your natural physical workspace so you don't have to reach into extreme camera edges.\n\n"
-                "Hold your index finger still and click Capture for each corner:"
+                "Calibrate your natural workspace so you can reach the entire screen comfortably without straining.\n\n"
+                "Move your index finger to each corner and click Capture, or use Smart Defaults:"
             )
-            tk.Label(p, text=desc, font=("Segoe UI", 9), fg="#c0c0d0", bg="#161622", justify="left", wraplength=260).pack(anchor="w", padx=14, pady=4)
+            tk.Label(p, text=desc, font=("Segoe UI", 9), fg="#c0c0d8", bg="#161622", justify="left", wraplength=300).pack(anchor="w", padx=16, pady=4)
 
-            btn_frame = tk.Frame(p, bg="#161622")
-            btn_frame.pack(fill="x", padx=14, pady=8)
+            # 2x2 Corner Grid
+            grid = tk.Frame(p, bg="#161622")
+            grid.pack(fill="x", padx=16, pady=10)
 
-            for corner_name, label in [
-                ("top_left", "Top-Left"),
-                ("top_right", "Top-Right"),
-                ("bottom_left", "Bottom-Left"),
-                ("bottom_right", "Bottom-Right")
-            ]:
-                row = tk.Frame(btn_frame, bg="#161622")
-                row.pack(fill="x", pady=3)
-                lbl = tk.Label(row, text=f"{label}:", font=("Segoe UI", 9), fg="#ffffff", bg="#161622", width=12, anchor="w")
-                lbl.pack(side="left")
-                btn = tk.Button(
-                    row, text="Capture", font=("Segoe UI", 8),
-                    bg="#2d2d40", fg="#00e5ff", relief="flat",
-                    command=lambda cn=corner_name: self._capture_corner(cn)
+            corners = [
+                ("top_left", "Top-Left", 0, 0),
+                ("top_right", "Top-Right", 0, 1),
+                ("bottom_left", "Bottom-Left", 1, 0),
+                ("bottom_right", "Bottom-Right", 1, 1),
+            ]
+
+            self.corner_buttons = {}
+            for key, label, r, c in corners:
+                captured = self.captured_corners.get(key) is not None
+                btn_text = f"✓ {label}" if captured else f"Capture {label}"
+                btn_bg = "#0f3d2a" if captured else "#2d2d40"
+                btn_fg = "#00e676" if captured else "#00e5ff"
+
+                b = tk.Button(
+                    grid, text=btn_text, font=("Segoe UI", 8, "bold"),
+                    bg=btn_bg, fg=btn_fg, relief="flat", width=16, height=2,
+                    command=lambda k=key, l=label: self._capture_corner(k, l)
                 )
-                btn.pack(side="right")
+                b.grid(row=r, column=c, padx=4, pady=4)
+                self.corner_buttons[key] = b
+
+            btn_defaults = tk.Button(
+                p, text="⚡ Use Smart Defaults (Recommended)", font=("Segoe UI", 9, "bold"),
+                bg="#1e2a3a", fg="#00e5ff", relief="flat",
+                command=self._apply_smart_defaults
+            )
+            btn_defaults.pack(fill="x", padx=16, pady=12)
 
         elif self.step == 3:
-            # Step 3: Pinch Sensitivity
-            tk.Label(p, text="Step 3 of 4", font=("Segoe UI", 9), fg="#00e5ff", bg="#161622").pack(anchor="w", padx=14, pady=(16, 2))
-            tk.Label(p, text="Pinch-to-Click", font=("Segoe UI", 12, "bold"), fg="#ffffff", bg="#161622").pack(anchor="w", padx=14, pady=(0, 8))
-            desc = (
-                "Pinch your thumb and index finger together to click (like Meta Quest).\n\n"
-                "Adjust sensitivity below so pinch triggers comfortably:"
-            )
-            tk.Label(p, text=desc, font=("Segoe UI", 9), fg="#c0c0d0", bg="#161622", justify="left", wraplength=260).pack(anchor="w", padx=14, pady=4)
+            # Step 3: Meta Quest Pinch-to-Click Tuning
+            tk.Label(p, text="Step 3 of 4", font=("Segoe UI", 9, "bold"), fg="#00e5ff", bg="#161622").pack(anchor="w", padx=16, pady=(16, 2))
+            tk.Label(p, text="Pinch-to-Click", font=("Segoe UI", 13, "bold"), fg="#ffffff", bg="#161622").pack(anchor="w", padx=16, pady=(0, 6))
 
-            tk.Label(p, text="Pinch Distance Threshold:", font=("Segoe UI", 9), fg="#ffffff", bg="#161622").pack(anchor="w", padx=14, pady=(12, 2))
+            desc = (
+                "Pinch your thumb and index fingertip together to click, exactly like Meta Quest controller-free mode.\n\n"
+                "Pinch and hold for half a second to Drag & Drop."
+            )
+            tk.Label(p, text=desc, font=("Segoe UI", 9), fg="#c0c0d8", bg="#161622", justify="left", wraplength=300).pack(anchor="w", padx=16, pady=4)
+
+            # Live Pinch Status Meter
+            self.lbl_pinch_meter = tk.Label(
+                p, text="Pinch Status: OPEN", font=("Segoe UI", 10, "bold"),
+                fg="#a0a0c0", bg="#161622"
+            )
+            self.lbl_pinch_meter.pack(anchor="w", padx=16, pady=(10, 2))
+
+            self.meter_progress = ttk.Progressbar(p, length=280, mode="determinate")
+            self.meter_progress.pack(fill="x", padx=16, pady=(0, 10))
+
+            # Sensitivity Slider
+            tk.Label(p, text="Pinch Trigger Distance:", font=("Segoe UI", 9), fg="#ffffff", bg="#161622").pack(anchor="w", padx=16, pady=(4, 2))
             self.scale_pinch = tk.Scale(
                 p, from_=0.03, to=0.12, resolution=0.005, orient="horizontal",
                 bg="#161622", fg="#00e5ff", highlightthickness=0,
                 command=lambda val: config.set("pinch_threshold", float(val))
             )
             self.scale_pinch.set(config.get("pinch_threshold", 0.065))
-            self.scale_pinch.pack(fill="x", padx=14)
+            self.scale_pinch.pack(fill="x", padx=16)
 
-            self.lbl_pinch_meter = tk.Label(p, text="Pinch Status: OPEN", font=("Segoe UI", 9, "bold"), fg="#888888", bg="#161622")
-            self.lbl_pinch_meter.pack(anchor="w", padx=14, pady=12)
+            # Practice Target Button
+            self.btn_practice = tk.Button(
+                p, text="🎯 Practice Target (Pinch Here)", font=("Segoe UI", 10, "bold"),
+                bg="#2a2a40", fg="#00e5ff", relief="flat", height=2,
+                command=self._on_practice_clicked
+            )
+            self.btn_practice.pack(fill="x", padx=16, pady=16)
 
         elif self.step == 4:
-            # Step 4: Smoothing & Speed
-            tk.Label(p, text="Step 4 of 4", font=("Segoe UI", 9), fg="#00e5ff", bg="#161622").pack(anchor="w", padx=14, pady=(16, 2))
-            tk.Label(p, text="Pointer Dynamics", font=("Segoe UI", 12, "bold"), fg="#ffffff", bg="#161622").pack(anchor="w", padx=14, pady=(0, 8))
+            # Step 4: Scrolling & Dynamics Practice
+            tk.Label(p, text="Step 4 of 4", font=("Segoe UI", 9, "bold"), fg="#00e5ff", bg="#161622").pack(anchor="w", padx=16, pady=(16, 2))
+            tk.Label(p, text="Scroll & Pointer Dynamics", font=("Segoe UI", 13, "bold"), fg="#ffffff", bg="#161622").pack(anchor="w", padx=16, pady=(0, 6))
 
-            tk.Label(p, text="Smoothness (Jitter Filter):", font=("Segoe UI", 9), fg="#ffffff", bg="#161622").pack(anchor="w", padx=14, pady=(8, 2))
+            desc = (
+                "To scroll: Place index and middle fingers side-by-side and swipe up or down.\n\n"
+                "Practice scrolling on the list below:"
+            )
+            tk.Label(p, text=desc, font=("Segoe UI", 9), fg="#c0c0d8", bg="#161622", justify="left", wraplength=300).pack(anchor="w", padx=16, pady=4)
+
+            # Interactive Scroll Test Box
+            scroll_frame = tk.Frame(p, bg="#161622")
+            scroll_frame.pack(fill="x", padx=16, pady=6)
+
+            scrollbar = tk.Scrollbar(scroll_frame)
+            scrollbar.pack(side="right", fill="y")
+
+            listbox = tk.Listbox(scroll_frame, yscrollcommand=scrollbar.set, height=4, bg="#101018", fg="#00e5ff", selectbackground="#1e2a3a")
+            for i in range(1, 21):
+                listbox.insert("end", f"  Document Page {i}  •  Scroll Test")
+            listbox.pack(side="left", fill="both", expand=True)
+            scrollbar.config(command=listbox.yview)
+
+            # Dynamics controls
+            tk.Label(p, text="Smoothing (1-Euro Filter):", font=("Segoe UI", 9), fg="#ffffff", bg="#161622").pack(anchor="w", padx=16, pady=(8, 2))
             scale_smooth = tk.Scale(
                 p, from_=0.5, to=3.0, resolution=0.1, orient="horizontal",
                 bg="#161622", fg="#00e5ff", highlightthickness=0,
                 command=lambda val: config.set("smoothing_min_cutoff", float(val))
             )
             scale_smooth.set(config.get("smoothing_min_cutoff", 1.2))
-            scale_smooth.pack(fill="x", padx=14)
-
-            tk.Label(p, text="Scroll Speed:", font=("Segoe UI", 9), fg="#ffffff", bg="#161622").pack(anchor="w", padx=14, pady=(10, 2))
-            scale_scroll = tk.Scale(
-                p, from_=0.5, to=3.0, resolution=0.1, orient="horizontal",
-                bg="#161622", fg="#00e5ff", highlightthickness=0,
-                command=lambda val: config.set("scroll_speed", float(val))
-            )
-            scale_scroll.set(config.get("scroll_speed", 1.4))
-            scale_scroll.pack(fill="x", padx=14)
+            scale_smooth.pack(fill="x", padx=16)
 
             btn_finish = tk.Button(
-                p, text="Save & Complete Setup", font=("Segoe UI", 10, "bold"),
+                p, text="✓ Complete Setup & Start Handsfree", font=("Segoe UI", 10, "bold"),
                 bg="#00e676", fg="#000000", activebackground="#69f0ae",
-                relief="flat", command=self._finish_calibration
+                relief="flat", height=2, command=self._finish_calibration
             )
-            btn_finish.pack(fill="x", padx=14, pady=24)
+            btn_finish.pack(fill="x", padx=16, pady=16)
 
-    def _capture_corner(self, corner_name: str) -> None:
+    def _on_practice_clicked(self) -> None:
+        self.practice_clicks += 1
+        if hasattr(self, "btn_practice"):
+            self.btn_practice.configure(
+                text=f"🎯 Nice Pinch! ({self.practice_clicks} registered)",
+                bg="#0f3d2a",
+                fg="#00e676"
+            )
+
+    def _apply_smart_defaults(self) -> None:
+        self.captured_corners = {
+            "top_left": (0.18, 0.18),
+            "top_right": (0.82, 0.18),
+            "bottom_left": (0.18, 0.82),
+            "bottom_right": (0.82, 0.82)
+        }
+        for key, btn in self.corner_buttons.items():
+            label = key.replace("_", " ").title()
+            btn.configure(text=f"✓ {label}", bg="#0f3d2a", fg="#00e676")
+        messagebox.showinfo("Smart Reach Applied", "Optimal ergonomic reach boundaries applied successfully!")
+
+    def _capture_corner(self, corner_name: str, label: str = "") -> None:
         self.captured_corners[corner_name] = self.current_index_coords
-        messagebox.showinfo("Corner Saved", f"Captured {corner_name.replace('_', ' ').title()} coordinate!")
+        if hasattr(self, "corner_buttons") and corner_name in self.corner_buttons:
+            self.corner_buttons[corner_name].configure(
+                text=f"✓ {label or corner_name}",
+                bg="#0f3d2a",
+                fg="#00e676"
+            )
 
     def _activate_webcam_ui(self) -> None:
         """Explicitly activates the laptop's built-in webcam hardware."""
@@ -317,7 +411,10 @@ class CalibrationWizard:
                     is_pinching = False
 
                     if hands:
+                        self.hand_detected = True
                         hand = hands[0]
+                        self.hand_label = handedness[0] if handedness else "Right"
+
                         # Index tip is landmark 8
                         idx_pt = hand[8]
                         self.current_index_coords = (idx_pt.x, idx_pt.y)
@@ -333,15 +430,50 @@ class CalibrationWizard:
 
                         frame = self.tracker.draw_skeleton(frame, hand, is_pinching=is_pinching)
 
-                        # Update step 3 meter
-                        if self.step == 3 and hasattr(self, "lbl_pinch_meter") and self.lbl_pinch_meter:
-                            if is_pinching:
-                                self.lbl_pinch_meter.configure(text="Pinch Status: CLICKED!", fg="#00ff88")
-                            else:
-                                self.lbl_pinch_meter.configure(text=f"Pinch Dist: {dist:.3f}", fg="#a0a0c0")
+                        # Draw reach boundary guidelines
+                        h_f, w_f, _ = frame.shape
+                        rl = int(config.get("reach_left", 0.18) * w_f)
+                        rt = int(config.get("reach_top", 0.18) * h_f)
+                        rr = int(config.get("reach_right", 0.82) * w_f)
+                        rb = int(config.get("reach_bottom", 0.82) * h_f)
+                        cv2.rectangle(frame, (rl, rt), (rr, rb), (70, 70, 90), 1, cv2.LINE_AA)
 
-                # Resize to fit preview panel
-                display_frame = cv2.resize(frame, (380, 480))
+                        # Update Step 1 Status
+                        if self.step == 1 and hasattr(self, "lbl_hand_status") and self.lbl_hand_status:
+                            self.lbl_hand_status.configure(
+                                text=f"✓ {self.hand_label.upper()} HAND RECOGNIZED",
+                                fg="#00e676"
+                            )
+                            self.lbl_hand_details.configure(
+                                text="Tracking 21 finger landmarks in real time. Click 'Next Step >'!",
+                                fg="#c0c0d8"
+                            )
+
+                        # Update Step 3 Pinch Meter
+                        if self.step == 3:
+                            if hasattr(self, "lbl_pinch_meter") and self.lbl_pinch_meter:
+                                if is_pinching:
+                                    self.lbl_pinch_meter.configure(text="Pinch Status: CLICKED! (ACTUATED)", fg="#00e676")
+                                else:
+                                    self.lbl_pinch_meter.configure(text=f"Pinch Distance: {dist:.3f} (Open)", fg="#00e5ff")
+                            if hasattr(self, "meter_progress") and self.meter_progress:
+                                pinch_pct = max(0, min(100, int((1.0 - (dist / 0.15)) * 100)))
+                                self.meter_progress["value"] = pinch_pct
+
+                    else:
+                        self.hand_detected = False
+                        if self.step == 1 and hasattr(self, "lbl_hand_status") and self.lbl_hand_status:
+                            self.lbl_hand_status.configure(
+                                text="SEARCHING FOR HAND...",
+                                fg="#ffaa00"
+                            )
+                            self.lbl_hand_details.configure(
+                                text="Raise your hand in front of the camera (1-2 ft away).",
+                                fg="#9090aa"
+                            )
+
+                # Resize to fit preview panel comfortably (440x330 standard 4:3)
+                display_frame = cv2.resize(frame, (440, 330))
                 rgb = cv2.cvtColor(display_frame, cv2.COLOR_BGR2RGB)
                 img = ImageTk.PhotoImage(image=Image.fromarray(rgb))
                 self.lbl_cam.configure(image=img)
@@ -349,11 +481,11 @@ class CalibrationWizard:
 
         if not has_rendered:
             # Standby graphic when webcam is not active or starting
-            standby = np.zeros((480, 380, 3), dtype=np.uint8)
+            standby = np.zeros((330, 440, 3), dtype=np.uint8)
             standby[:] = (22, 22, 30)
-            cv2.putText(standby, "Webcam Standby", (85, 210), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 229, 255), 2, cv2.LINE_AA)
-            cv2.putText(standby, "Click 'Turn On Webcam' below", (50, 250), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (180, 180, 195), 1, cv2.LINE_AA)
-            cv2.putText(standby, "to activate device hardware", (75, 275), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (140, 140, 160), 1, cv2.LINE_AA)
+            cv2.putText(standby, "Webcam Standby", (110, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 229, 255), 2, cv2.LINE_AA)
+            cv2.putText(standby, "Click 'Turn On Webcam' below", (85, 185), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (180, 180, 195), 1, cv2.LINE_AA)
+            cv2.putText(standby, "to activate device hardware", (100, 210), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (140, 140, 160), 1, cv2.LINE_AA)
             img = ImageTk.PhotoImage(image=Image.fromarray(standby))
             self.lbl_cam.configure(image=img)
             self.lbl_cam.image = img
